@@ -27,6 +27,8 @@ system = open("system.txt", "r").read()
 
 def create_llm_provider(provider_type: str = "openai", model_name: str = "gpt-4o-mini"):
     """Create and configure LLM provider based on provider type"""
+    if provider_type is None:
+        provider_type = "openai"
     provider_type = provider_type.lower()
     
     if provider_type == "ollama":
@@ -45,9 +47,11 @@ def create_llm_provider(provider_type: str = "openai", model_name: str = "gpt-4o
             return llm
         except Exception as e:
             print(f'Failed to create Ollama provider: {e}', file=sys.stderr)
-            print('Falling back to OpenAI provider...', file=sys.stderr)
-            # Fall back to OpenAI
-            provider_type = "openai"
+            if os.environ.get("OPENAI_API_KEY"):
+                print('Falling back to OpenAI provider...', file=sys.stderr)
+                provider_type = "openai"
+            else:
+                raise Exception(f"Ollama provider failed and no OpenAI fallback available: {e}")
     
     if provider_type == "openai":
         # Configure OpenAI provider (existing logic)
