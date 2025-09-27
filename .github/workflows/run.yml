@@ -104,8 +104,18 @@ jobs:
         echo "开始AI增强处理... / Starting AI enhancement processing..."
         
         cd ai
+        # Export AI provider configuration
+        export AI_PROVIDER="${{ vars.AI_PROVIDER || 'openai' }}"
+        
+        # OpenAI configuration
         export OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
         export OPENAI_BASE_URL=${{ secrets.OPENAI_BASE_URL }}
+        
+        # Ollama configuration 
+        export OLLAMA_BASE_URL="${{ vars.OLLAMA_BASE_URL || 'http://localhost:11434' }}"
+        export OLLAMA_MODEL="${{ vars.OLLAMA_MODEL || 'llama3.2' }}"
+        
+        # Common configuration
         export LANGUAGE="${{ vars.LANGUAGE }}"
         export MODEL_NAME="${{ vars.MODEL_NAME }}"
         

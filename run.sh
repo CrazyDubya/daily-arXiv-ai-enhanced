@@ -7,44 +7,98 @@
 # 环境变量检查和提示 / Environment variables check and prompt
 echo "=== 本地调试环境检查 / Local Debug Environment Check ==="
 
-# 检查必需的环境变量 / Check required environment variables
-if [ -z "$OPENAI_API_KEY" ]; then
-    echo "⚠️  提示：未设置 OPENAI_API_KEY / Warning: OPENAI_API_KEY not set"
-    echo "📝 要进行完整本地调试，请设置以下环境变量 / For complete local debugging, please set the following environment variables:"
-    echo ""
-    echo "🔑 必需变量 / Required variables:"
-    echo "   export OPENAI_API_KEY=\"your-api-key-here\""
-    echo ""
-    echo "🔧 可选变量 / Optional variables:"
-    echo "   export OPENAI_BASE_URL=\"https://api.openai.com/v1\"  # API基础URL / API base URL"
-    echo "   export LANGUAGE=\"Chinese\"                           # 语言设置 / Language setting"
-    echo "   export CATEGORIES=\"cs.CV, cs.CL\"                    # 关注分类 / Categories of interest"
-    echo "   export MODEL_NAME=\"gpt-4o-mini\"                     # 模型名称 / Model name"
-    echo ""
-    echo "💡 设置后重新运行此脚本即可进行完整测试 / After setting, rerun this script for complete testing"
-    echo "🚀 或者继续运行部分流程（爬取+去重检查）/ Or continue with partial workflow (crawl + dedup check)"
-    echo ""
-    read -p "继续部分流程？(y/N) / Continue with partial workflow? (y/N): " continue_partial
-    if [[ ! $continue_partial =~ ^[Yy]$ ]]; then
-        echo "退出脚本 / Exiting script"
-        exit 0
+# 检查AI提供商配置 / Check AI provider configuration
+AI_PROVIDER="${AI_PROVIDER:-openai}"
+
+if [ "$AI_PROVIDER" = "ollama" ]; then
+    # 检查Ollama配置 / Check Ollama configuration
+    if [ -z "$OLLAMA_BASE_URL" ] && ! curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
+        echo "⚠️  提示：使用Ollama但未检测到Ollama服务 / Warning: Using Ollama but Ollama service not detected"
+        echo "📝 要使用Ollama进行完整本地调试，请确保: / For complete local debugging with Ollama, please ensure:"
+        echo ""
+        echo "🔧 Ollama配置 / Ollama configuration:"
+        echo "   1. 安装并启动Ollama服务 / Install and start Ollama service"
+        echo "   2. 拉取所需模型: ollama pull llama3.2 / Pull required model: ollama pull llama3.2"
+        echo "   export AI_PROVIDER=\"ollama\"                         # AI提供商 / AI provider"
+        echo "   export OLLAMA_BASE_URL=\"http://localhost:11434\"      # Ollama服务地址 / Ollama service URL"
+        echo "   export OLLAMA_MODEL=\"llama3.2\"                      # 模型名称 / Model name"
+        echo ""
+        echo "🔧 可选变量 / Optional variables:"
+        echo "   export LANGUAGE=\"Chinese\"                           # 语言设置 / Language setting"
+        echo "   export CATEGORIES=\"cs.CV, cs.CL\"                    # 关注分类 / Categories of interest"
+        echo ""
+        echo "💡 或者切换到OpenAI: export AI_PROVIDER=\"openai\" / Or switch to OpenAI: export AI_PROVIDER=\"openai\""
+        echo "🚀 或者继续运行部分流程（爬取+去重检查）/ Or continue with partial workflow (crawl + dedup check)"
+        echo ""
+        read -p "继续部分流程？(y/N) / Continue with partial workflow? (y/N): " continue_partial
+        if [[ ! $continue_partial =~ ^[Yy]$ ]]; then
+            echo "退出脚本 / Exiting script"
+            exit 0
+        fi
+        PARTIAL_MODE=true
+    else
+        echo "✅ Ollama服务已检测到 / Ollama service detected"
+        PARTIAL_MODE=false
+        
+        # 设置默认值 / Set default values
+        export LANGUAGE="${LANGUAGE:-Chinese}"
+        export CATEGORIES="${CATEGORIES:-cs.CV, cs.CL}"
+        export OLLAMA_MODEL="${OLLAMA_MODEL:-llama3.2}"
+        export OLLAMA_BASE_URL="${OLLAMA_BASE_URL:-http://localhost:11434}"
+        
+        echo "🔧 当前配置 / Current configuration:"
+        echo "   AI_PROVIDER: $AI_PROVIDER"
+        echo "   LANGUAGE: $LANGUAGE"
+        echo "   CATEGORIES: $CATEGORIES"
+        echo "   OLLAMA_MODEL: $OLLAMA_MODEL"
+        echo "   OLLAMA_BASE_URL: $OLLAMA_BASE_URL"
     fi
-    PARTIAL_MODE=true
+elif [ "$AI_PROVIDER" = "openai" ]; then
+    # 检查OpenAI配置 / Check OpenAI configuration
+    if [ -z "$OPENAI_API_KEY" ]; then
+        echo "⚠️  提示：未设置 OPENAI_API_KEY / Warning: OPENAI_API_KEY not set"
+        echo "📝 要进行完整本地调试，请设置以下环境变量 / For complete local debugging, please set the following environment variables:"
+        echo ""
+        echo "🔑 必需变量 / Required variables:"
+        echo "   export OPENAI_API_KEY=\"your-api-key-here\""
+        echo ""
+        echo "🔧 可选变量 / Optional variables:"
+        echo "   export AI_PROVIDER=\"openai\"                         # AI提供商 (默认) / AI provider (default)"
+        echo "   export OPENAI_BASE_URL=\"https://api.openai.com/v1\"  # API基础URL / API base URL"
+        echo "   export LANGUAGE=\"Chinese\"                           # 语言设置 / Language setting"
+        echo "   export CATEGORIES=\"cs.CV, cs.CL\"                    # 关注分类 / Categories of interest"
+        echo "   export MODEL_NAME=\"gpt-4o-mini\"                     # 模型名称 / Model name"
+        echo ""
+        echo "💡 设置后重新运行此脚本即可进行完整测试 / After setting, rerun this script for complete testing"
+        echo "🚀 或者继续运行部分流程（爬取+去重检查）/ Or continue with partial workflow (crawl + dedup check)"
+        echo ""
+        read -p "继续部分流程？(y/N) / Continue with partial workflow? (y/N): " continue_partial
+        if [[ ! $continue_partial =~ ^[Yy]$ ]]; then
+            echo "退出脚本 / Exiting script"
+            exit 0
+        fi
+        PARTIAL_MODE=true
+    else
+        echo "✅ OPENAI_API_KEY 已设置 / OPENAI_API_KEY is set"
+        PARTIAL_MODE=false
+        
+        # 设置默认值 / Set default values
+        export LANGUAGE="${LANGUAGE:-Chinese}"
+        export CATEGORIES="${CATEGORIES:-cs.CV, cs.CL}"
+        export MODEL_NAME="${MODEL_NAME:-gpt-4o-mini}"
+        export OPENAI_BASE_URL="${OPENAI_BASE_URL:-https://api.openai.com/v1}"
+        
+        echo "🔧 当前配置 / Current configuration:"
+        echo "   AI_PROVIDER: $AI_PROVIDER"
+        echo "   LANGUAGE: $LANGUAGE"
+        echo "   CATEGORIES: $CATEGORIES"
+        echo "   MODEL_NAME: $MODEL_NAME"
+        echo "   OPENAI_BASE_URL: $OPENAI_BASE_URL"
+    fi
 else
-    echo "✅ OPENAI_API_KEY 已设置 / OPENAI_API_KEY is set"
-    PARTIAL_MODE=false
-    
-    # 设置默认值 / Set default values
-    export LANGUAGE="${LANGUAGE:-Chinese}"
-    export CATEGORIES="${CATEGORIES:-cs.CV, cs.CL}"
-    export MODEL_NAME="${MODEL_NAME:-gpt-4o-mini}"
-    export OPENAI_BASE_URL="${OPENAI_BASE_URL:-https://api.openai.com/v1}"
-    
-    echo "🔧 当前配置 / Current configuration:"
-    echo "   LANGUAGE: $LANGUAGE"
-    echo "   CATEGORIES: $CATEGORIES"
-    echo "   MODEL_NAME: $MODEL_NAME"
-    echo "   OPENAI_BASE_URL: $OPENAI_BASE_URL"
+    echo "❌ 未知的AI提供商: $AI_PROVIDER / Unknown AI provider: $AI_PROVIDER"
+    echo "支持的提供商: openai, ollama / Supported providers: openai, ollama"
+    exit 1
 fi
 
 echo ""
