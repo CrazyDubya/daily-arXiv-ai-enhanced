@@ -143,21 +143,20 @@ def process_all_items(data: List[Dict], model_name: str, language: str, max_work
 
 def main():
     args = parse_args()
-    model_name = os.environ.get("MODEL_NAME", 'deepseek-chat')
+    model_name = os.environ.get("MODEL_NAME")
     language = os.environ.get("LANGUAGE", 'Chinese')
     
     # Determine AI provider (defaults to OpenAI for backward compatibility)
     ai_provider = os.environ.get("AI_PROVIDER", "openai").lower()
     
     # Handle provider-specific model defaults
-    if ai_provider == "ollama":
-        # Default to llama3.2 for Ollama if no model specified
-        if model_name == 'deepseek-chat':  # Default OpenAI model
+    if not model_name:
+        if ai_provider == "ollama":
             model_name = os.environ.get("OLLAMA_MODEL", "llama3.2")
-    elif ai_provider == "openai":
-        # Keep existing OpenAI defaults
-        if model_name == 'deepseek-chat':
-            model_name = os.environ.get("MODEL_NAME", "gpt-4o-mini")
+        elif ai_provider == "openai":
+            model_name = "gpt-4o-mini"
+        else:
+            model_name = "deepseek-chat"
     
     print(f'Using AI provider: {ai_provider} with model: {model_name}', file=sys.stderr)
 
