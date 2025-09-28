@@ -50,6 +50,7 @@ def create_llm_provider(provider_type: str = "openai", model_name: str = "gpt-4o
             if os.environ.get("OPENAI_API_KEY"):
                 print('Falling back to OpenAI provider...', file=sys.stderr)
                 provider_type = "openai"
+                model_name = "gpt-4o-mini"  # Ensure OpenAI-compatible model name
             else:
                 raise Exception(f"Ollama provider failed and no OpenAI fallback available: {e}")
     
