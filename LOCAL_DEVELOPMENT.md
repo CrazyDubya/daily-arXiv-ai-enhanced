@@ -12,6 +12,20 @@ pip3 install arxiv python-dotenv langchain langchain-openai scrapy tqdm
 ```
 
 Using uv (recommended for production):
+
+> **Security Note:**  
+> Piping remote scripts directly to the shell is a security risk.  
+> Before running the following command, you should review the script at [https://astral.sh/uv/install.sh](https://astral.sh/uv/install.sh) to ensure it is safe.  
+>  
+> **Alternative installation (recommended):**  
+> If you have [pipx](https://pypa.github.io/pipx/) installed, you can install uv safely with:  
+> ```bash
+> pipx install uv
+> ```
+> Or, using pip (not as isolated):  
+> ```bash
+> pip install uv
+> ```
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 uv sync
