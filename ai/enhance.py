@@ -12,6 +12,7 @@ from tqdm import tqdm
 
 import langchain_core.exceptions
 from langchain_openai import ChatOpenAI
+from langchain_ollama import ChatOllama
 from langchain.prompts import (
     ChatPromptTemplate,
     SystemMessagePromptTemplate,
@@ -23,6 +24,44 @@ if os.path.exists('.env'):
     dotenv.load_dotenv()
 template = open("template.txt", "r").read()
 system = open("system.txt", "r").read()
+
+def create_llm_provider(provider_type: str = "openai", model_name: str = "gpt-4o-mini"):
+    """Create and configure LLM provider based on provider type"""
+    if provider_type is None:
+        provider_type = "openai"
+    provider_type = provider_type.lower()
+    
+    if provider_type == "ollama":
+        # Configure Ollama provider
+        ollama_base_url = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+        ollama_model = os.environ.get("OLLAMA_MODEL", model_name)
+        
+        print(f'Creating Ollama provider with model: {ollama_model}, base_url: {ollama_base_url}', file=sys.stderr)
+        
+        try:
+            llm = ChatOllama(
+                model=ollama_model,
+                base_url=ollama_base_url,
+                temperature=0.1,
+            ).with_structured_output(Structure, method="function_calling")
+            return llm
+        except Exception as e:
+            print(f'Failed to create Ollama provider: {e}', file=sys.stderr)
+            if os.environ.get("OPENAI_API_KEY"):
+                print('Falling back to OpenAI provider...', file=sys.stderr)
+                provider_type = "openai"
+                model_name = "gpt-4o-mini"  # Ensure OpenAI-compatible model name
+            else:
+                raise Exception(f"Ollama provider failed and no OpenAI fallback available: {e}")
+    
+    if provider_type == "openai":
+        # Configure OpenAI provider (existing logic)
+        print(f'Creating OpenAI provider with model: {model_name}', file=sys.stderr)
+        llm = ChatOpenAI(model=model_name).with_structured_output(Structure, method="function_calling")
+        return llm
+    
+    else:
+        raise ValueError(f"Unsupported provider type: {provider_type}. Supported types: 'openai', 'ollama'")
 
 def parse_args():
     """解析命令行参数"""
@@ -65,10 +104,10 @@ def process_single_item(chain, item: Dict, language: str) -> Dict:
         }
     return item
 
-def process_all_items(data: List[Dict], model_name: str, language: str, max_workers: int) -> List[Dict]:
+def process_all_items(data: List[Dict], model_name: str, language: str, max_workers: int, provider_type: str = "openai") -> List[Dict]:
     """并行处理所有数据项"""
-    llm = ChatOpenAI(model=model_name).with_structured_output(Structure, method="function_calling")
-    print('Connect to:', model_name, file=sys.stderr)
+    llm = create_llm_provider(provider_type, model_name)
+    print('Connect to:', model_name, 'via', provider_type, file=sys.stderr)
     
     prompt_template = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template(system),
@@ -105,8 +144,22 @@ def process_all_items(data: List[Dict], model_name: str, language: str, max_work
 
 def main():
     args = parse_args()
-    model_name = os.environ.get("MODEL_NAME", 'deepseek-chat')
+    model_name = os.environ.get("MODEL_NAME")
     language = os.environ.get("LANGUAGE", 'Chinese')
+    
+    # Determine AI provider (defaults to OpenAI for backward compatibility)
+    ai_provider = os.environ.get("AI_PROVIDER", "openai").lower()
+    
+    # Handle provider-specific model defaults
+    if not model_name:
+        if ai_provider == "ollama":
+            model_name = os.environ.get("OLLAMA_MODEL", "llama3.2")
+        elif ai_provider == "openai":
+            model_name = "gpt-4o-mini"
+        else:
+            model_name = "deepseek-chat"
+    
+    print(f'Using AI provider: {ai_provider} with model: {model_name}', file=sys.stderr)
 
     # 检查并删除目标文件
     target_file = args.data.replace('.jsonl', f'_AI_enhanced_{language}.jsonl')
@@ -136,7 +189,8 @@ def main():
         data,
         model_name,
         language,
-        args.max_workers
+        args.max_workers,
+        ai_provider
     )
     
     # 保存结果
