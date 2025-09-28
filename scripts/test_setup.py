@@ -168,6 +168,6 @@ def main():
         return False
 
 if __name__ == "__main__":
-    os.chdir("/home/runner/work/daily-arXiv-ai-enhanced/daily-arXiv-ai-enhanced")
+    os.chdir(Path(__file__).parent.parent)
     success = main()
     sys.exit(0 if success else 1)
